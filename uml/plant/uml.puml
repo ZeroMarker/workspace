@@ -1,0 +1,17 @@
+@startuml
+    title some silly example\n showing <b>Plant UML</b> title
+
+    class SampleClass {
+       {static} - private field1
+       {abstract} # protected field2
+        ~ package method1()
+        + public method2() {classifier}
+    }
+
+
+    Object <|-- ArrayList
+    Object : equals()
+    ArrayList : Object[] elementData
+    ArrayList : size()
+
+@enduml
