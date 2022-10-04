@@ -1,0 +1,68 @@
+; Microprogram for ALU
+; To compile this you will need to download latest Fusion.zip from https://github.com/eugenelepekhin/Fusion/releases
+
+; Source of output
+macro OutputPart value { value << 0 }
+; Source of carry
+macro CarryPart  value { value << 2 }
+
+macro FromAlu	{ OutputPart 0 }
+macro FromA		{ OutputPart 1 }
+macro FromB		{ OutputPart 2 }
+macro Value0	{ OutputPart 3 }
+
+; Source of carry bit
+macro Carry		{ CarryPart 0 }
+macro NotCarry	{ CarryPart 1 }
+macro Zero		{ CarryPart 2 }
+macro One		{ CarryPart 3 }
+
+macro main {
+	;0000 - and
+	FromAlu | Zero
+
+	;0001 - or
+	FromAlu | Zero
+
+	;0010 - xor
+	FromAlu | Zero
+
+	;0011 - sign extend
+	FromAlu | Zero
+
+	;0100 - add
+	FromAlu | Zero
+
+	;0101 - sub
+	FromAlu | One
+
+	;0110 - left shift
+	FromAlu | Zero
+
+	;0111 - right shift
+	FromAlu | Zero
+
+	;1000 - A
+	FromA | Zero
+
+	;1001 - B
+	FromB | Zero
+
+	;1010 - 0
+	Value0 | Zero
+
+	;1011 - 0
+	Value0 | Zero
+
+	;1100 - adc
+	FromAlu | Carry
+
+	;1101 - sbc
+	FromAlu | Carry
+
+	;1110 - left rotate
+	FromAlu | Carry
+
+	;1111 - right rotate
+	FromAlu | Carry
+}

@@ -13,6 +13,7 @@ hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 cv2.namedWindow('TrackBar')
 cv2.resizeWindow('TrackBar', 640, 320)
 
+# HSV color RGB
 cv2.createTrackbar('Hue Min', 'TrackBar', 0, 179, empty)
 cv2.createTrackbar('Hue Max', 'TrackBar', 179, 179, empty)
 cv2.createTrackbar('Sat Min', 'TrackBar', 0, 255, empty)

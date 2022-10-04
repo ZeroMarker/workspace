@@ -1,0 +1,186 @@
+; Micro program for CPU controller
+; To compile this you will need to download latest Fusion.zip from https://github.com/eugenelepekhin/Fusion/releases
+
+macro CpuCountBit			value { value << 0 }	; 1 bit
+macro ASource				value { value << 1 }	; 2 bit
+macro AluClock				value { value << 3 }	; 1 bit
+macro RegisterClock			value { value << 4 }	; 1 bit
+macro StateClock			value { value << 5 }	; 1 bit
+macro AddressSource			value { value << 6 }	; 1 bit
+macro MemoryClock			value { value << 7 }	; 1 bit
+macro CarryOperation		value { value << 8 }	; 2 bit
+macro OverflowOperation		value { value << 10 }	; 2 bit
+macro SignOperation			value { value << 12 }	; 2 bit
+macro ZeroOperation			value { value << 14 }	; 2 bit
+macro JumpOperation			value { value << 16 }	; 1 bit
+macro IPOperation			value { value << 17 }	; 1 bit
+macro HaltFlag				value { value << 18 }	; 1 bit
+
+
+macro CommandDone		{ CpuCountBit 1 }
+
+macro AfromR0			{ ASource 0 }
+macro AfromMemory		{ ASource 1 }
+macro AfromIP			{ ASource 2 }
+;macro Afrom1			{ ASource 3 }
+
+macro AluLatch			{ AluClock 1 }
+
+macro WriteRegister		{ RegisterClock 1 }
+macro WriteState		{ StateClock 1 }
+
+;macro CodeAddress		{ AddressSource 0 }
+macro DataAddress		{ AddressSource 1 }
+
+macro WriteMemory		{ MemoryClock 1 }
+
+macro CheckC			{ (CarryOperation 3) | (JumpOperation 1) }
+macro CheckO			{ (OverflowOperation 3) | (JumpOperation 1) }
+macro CheckS			{ (SignOperation 3) | (JumpOperation 1) }
+macro CheckZ			{ (ZeroOperation 3) | (JumpOperation 1) }
+
+macro CheckNC			{ (CarryOperation 2) | (JumpOperation 1) }
+;macro CheckNO			{ (OverflowOperation 2) | (JumpOperation 1) }
+macro CheckNS			{ (SignOperation 2) | (JumpOperation 1) }
+macro CheckNZ			{ (ZeroOperation 2) | (JumpOperation 1) }
+
+macro Jump				{ JumpOperation 1 }
+
+macro IPClock			{ IPOperation 1 }
+
+; Microprogram is stored in 24 bits ROM so each operation need 3 bytes.
+macro Split value {
+	value & 0xFF
+	(value >> 8) & 0xFF
+	(value >> 16) & 0xFF
+}
+
+; Fills memory with 0s
+macro Fill count {
+	if(0 < count) {
+		Split 0
+		Fill count - 1
+	}
+}
+
+; Fills memory remaining to 4 cells boundary with 0s
+macro FillTheRest {
+endOfCommand:
+	if((endOfCommand % 3) != 0) {
+		error "Misplaced end of command at: " + endOfCommand
+	}
+
+	Fill (4 - (endOfCommand / 3) % 4) % 4
+}
+
+atomic macro CommandAlu writeRegister, writeState {
+	; 0 clock
+	Split 0
+
+	; 1 clock
+	Split AfromR0 | AluLatch
+
+	; 2 clock
+	Split (WriteRegister * writeRegister) | (WriteState * writeState) | IPClock | CommandDone
+
+	FillTheRest
+}
+
+atomic macro CommandLI { ; load immediate
+	; 0 clock
+	Split 0
+
+	; 1 clock
+	Split IPClock
+
+	; 2 clock
+	Split AfromMemory | AluLatch
+
+	; 3 clock
+	Split WriteRegister | IPClock | CommandDone
+
+	FillTheRest
+}
+
+atomic macro CommandLD {
+	; 0 clock
+	Split 0
+
+	; 1 clock
+	Split AfromMemory | DataAddress | AluLatch
+
+	; 2 clock
+	Split WriteRegister | IPClock | CommandDone
+
+	FillTheRest
+}
+
+atomic macro CommandSD {
+	; 0 clock
+	Split 0
+
+	; 1 clock
+	Split DataAddress | WriteMemory | IPClock | CommandDone
+
+	FillTheRest
+}
+
+atomic macro CommandSI {
+	; 0 clock
+	Split 0
+
+	; 1 clock
+	Split AfromIP | AluLatch
+
+	; 2 clock
+	Split WriteRegister | IPClock | CommandDone
+
+	FillTheRest
+}
+
+atomic macro CommandJump jumpMask {
+	; 0 clock
+	Split 0
+
+	; 1 clock
+	Split jumpMask | IPClock | CommandDone
+
+	FillTheRest
+}
+
+atomic macro CommandHalt {
+	; 0 clock
+	Split 0
+
+	; 1 clock
+	Split (HaltFlag 1)
+
+	; 2 clock
+	Split IPClock | CommandDone
+
+	FillTheRest
+}
+
+macro main {
+	;
+	CommandAlu 1, 1			; 0 - ALU command on 2 registers write result to first one and saves state flags
+	CommandAlu 1, 0			; 1 - ALU command on 2 registers write result to first one and not affect flags
+	CommandAlu 0, 1			; 2 - ALU command on 2 registers and affect flags
+
+	CommandLI				; 3 load immediate
+	CommandLD				; 4 load data from memory mem[r2] -> r1
+	CommandSD				; 5 save data to memory   r1 -> mem[r2]
+	CommandSI				; 6 save IP to r IP -> r
+	CommandJump Jump		; 7 jump r -> IP
+
+	CommandJump CheckC		; 8 jump if carry r -> IP
+	CommandJump CheckO		; 9 jump if overflow r -> IP
+	CommandJump CheckS		; A jump if sign r -> IP
+	CommandJump CheckZ		; B jump if zero r -> IP
+
+	CommandJump CheckNC		; C jump if not carry r -> IP
+	CommandJump CheckNS		; D jump if not sign r -> IP
+	CommandJump CheckNZ		; E jump if not zero r -> IP
+
+	CommandHalt				; F
+}

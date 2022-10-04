@@ -1,0 +1,65 @@
+;
+binary 16
+
+macro r0 { 0x0 }
+macro r1 { 0x1 }
+macro r2 { 0x2 }
+macro r3 { 0x3 }
+macro r4 { 0x4 }
+macro r5 { 0x5 }
+macro r6 { 0x6 }
+macro r7 { 0x7 }
+macro r8 { 0x8 }
+macro r9 { 0x9 }
+macro rA { 0xA }
+macro rB { 0xB }
+macro rC { 0xC }
+macro rD { 0xD }
+macro rE { 0xE }
+macro rF { 0xF }
+
+macro COP cpuCop, aluCop, a, b {
+	if((cpuCop & 0xF) != cpuCop) {
+		error "CPU COP is invalid: " + cpuCop
+	}
+	if((aluCop & 0xF) != aluCop) {
+		error "ALU COP is invalid: " + aluCop
+	}
+	if((a & 0xF) != a) {
+		error "a is invalid: " + a
+	}
+	if((b & 0xF) != b) {
+		error "b is invalid: " + b
+	}
+
+	(cpuCop << 12) | (aluCop << 8) | (b << 4) | a
+}
+
+atomic macro and	a, b	{ COP 0x0, 0x0, a, b }
+atomic macro or		a, b	{ COP 0x0, 0x1, a, b }
+atomic macro xor	a, b	{ COP 0x0, 0x2, a, b }
+atomic macro sign	a, b	{ COP 0x0, 0x3, a, b }	; extend sign
+atomic macro add	a, b	{ COP 0x0, 0x4, a, b }
+atomic macro sub	a, b	{ COP 0x0, 0x5, a, b }	; a - b -> a
+atomic macro ls		a		{ COP 0x0, 0x6, a, a }	; left shift
+atomic macro rs		a		{ COP 0x0, 0x7, a, a }	; right sihft
+atomic macro mr		a, b	{ COP 0x1, 0x9, a, b }	; move register b -> a
+atomic macro zr		a		{ COP 0x1, 0xA, a, 0 }	; zero register
+atomic macro cmp	a, b	{ COP 0x2, 0x5, a, b }	; a - b
+atomic macro adc	a, b	{ COP 0x0, 0xC, a, b }
+atomic macro sbc	a, b	{ COP 0x0, 0xD, a, b }
+atomic macro rl		a		{ COP 0x0, 0xE, a, a }	; rotate left
+atomic macro rr		a		{ COP 0x0, 0xF, a, a }	; rotate right
+atomic macro li		a, data { COP 0x3, 0x8, a, 0 data & 0xFFFF }	; load immediate
+atomic macro ld		a, b	{ COP 0x4, 0x8, a, b }	; load data mem[b] -> a
+atomic macro sd		a, b	{ COP 0x5, 0x0, a, b }	; save data a -> mem[b]
+atomic macro si		r		{ COP 0x6, 0x8, r, 0 }	; save IP to register
+atomic macro j		r		{ COP 0x7, 0x0, 0, r }	; jump to address in register
+atomic macro jc		r		{ COP 0x8, 0x0, 0, r }
+atomic macro jo		r		{ COP 0x9, 0x0, 0, r }
+atomic macro js		r		{ COP 0xA, 0x0, 0, r }
+atomic macro jz		r		{ COP 0xB, 0x0, 0, r }
+atomic macro jnc	r		{ COP 0xC, 0x0, 0, r }
+atomic macro jns	r		{ COP 0xD, 0x0, 0, r }
+atomic macro jnz	r		{ COP 0xE, 0x0, 0, r }
+atomic macro halt			{ COP 0xF, 0x0, 0, 0 }
