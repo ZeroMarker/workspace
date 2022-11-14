@@ -1,4 +1,4 @@
-data <- read.csv("D:/coding/r/stu.csv", encoding="UTF-8")
+data <- read.csv("../dataset/stu.csv", encoding="UTF-8")
 
 z = scale(data[2:4])
 
